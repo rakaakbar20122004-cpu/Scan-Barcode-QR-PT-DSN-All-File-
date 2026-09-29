@@ -1,0 +1,401 @@
+l<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>SISTEM SCANNER BARCODE OTOMATIS - PT DAYA SAKTI NIAGA</title>
+
+    <!-- Pustaka Eksternal -->
+    <script
+      src="https://unpkg.com/html5-qrcode"
+      type="text/javascript"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Font & Icon Library -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- File CSS Eksternal -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="file-scanner-temp"></div>
+
+    <!-- APP HEADER -->
+    <div class="app-header">
+      <div class="brand-box">
+        <div class="logo-icon"><i class="fa-solid fa-layer-group"></i></div>
+        <div>
+          <div class="company-title">PT DAYA SAKTI NIAGA</div>
+          <div class="app-name">Sistem Scanner Barcode</div>
+        </div>
+      </div>
+      <div class="clock-display" id="liveClock">00:00:00</div>
+    </div>
+
+    <!-- CONTAINER UTAMA -->
+    <div class="page-container">
+      <!-- ================= HALAMAN 1: HOME MENU ================= -->
+      <div class="page-view active" id="page-home">
+        <h2
+          style="
+            font-size: 18px;
+            text-align: center;
+            margin-top: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+          "
+        >
+          Menu Utama Operasional
+        </h2>
+        <p
+          style="
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 10px;
+          "
+        >
+          Pilih opsi untuk membuka halaman terkait
+        </p>
+
+        <div class="grid-menu-container">
+          <div
+            class="neon-card cyan-border"
+            onclick="switchPage('page-scanner')"
+          >
+            <i class="fa-solid fa-qrcode card-icon"></i>
+            <div class="card-title">Dashboard Scanner</div>
+            <div class="card-desc">Buka pemindai kamera & scan barang</div>
+          </div>
+
+          <div
+            class="neon-card green-border"
+            onclick="switchPage('page-history')"
+          >
+            <i class="fa-solid fa-calendar-days card-icon"></i>
+            <div class="card-title">Cari Per Tanggal</div>
+            <div class="card-desc">Lihat riwayat scan per hari</div>
+          </div>
+
+          <div
+            class="neon-card purple-border"
+            onclick="switchPage('page-export')"
+          >
+            <i class="fa-solid fa-share-nodes card-icon"></i>
+            <div class="card-title">Export Data</div>
+            <div class="card-desc">Unduh / kirim file Excel & PDF</div>
+          </div>
+
+          <div class="neon-card red-border" onclick="confirmResetData()">
+            <i class="fa-solid fa-trash-arrow-up card-icon"></i>
+            <div class="card-title">Reset Data Hari Ini</div>
+            <div class="card-desc">Kosongkan seluruh data scan hari ini</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= HALAMAN 2: DASHBOARD SCANNER ================= -->
+      <div class="page-view" id="page-scanner">
+        <div class="page-header-nav">
+          <button class="btn-back" onclick="switchPage('page-home')">
+            <i class="fa-solid fa-arrow-left"></i> Kembali ke Menu Utama
+          </button>
+          <button
+            class="btn-icon-action"
+            onclick="toggleAudioMute()"
+            id="muteBtn"
+          >
+            <i class="fa-solid fa-volume-high"></i> Audio: ON
+          </button>
+        </div>
+
+        <div class="scanner-wrapper">
+          <div class="scanner-container" id="scanBox">
+            <div class="laser"></div>
+            <div id="reader"></div>
+            <div class="scanner-overlay">
+              <button
+                class="btn-custom"
+                id="camToggleBtn"
+                onclick="toggleScanner()"
+              >
+                <i class="fa-solid fa-camera"></i> Mulai Scanner
+              </button>
+            </div>
+          </div>
+
+          <div class="control-bar">
+            <button onclick="toggleTorch()">
+              <i class="fa-solid fa-bolt"></i> Senter ON/OFF
+            </button>
+            <label for="qrFileInput"
+              ><i class="fa-solid fa-image"></i> Upload Gambar</label
+            >
+            <input
+              type="file"
+              id="qrFileInput"
+              accept="image/*"
+              style="display: none"
+              onchange="scanFromFile(this)"
+            />
+          </div>
+        </div>
+
+        <div style="margin-top: 20px">
+          <div class="stats-single-box">
+            <div class="stat-lbl-large">TOTAL SCAN HARI INI</div>
+            <div class="stat-val-large" id="statTotalScanHome">0</div>
+          </div>
+
+          <!-- HASIL LIST SCAN -->
+          <div class="data-list-box" id="scanListHome"></div>
+
+          <!-- TOMBOL EXPORT LANGSUNG DI BAWAH HASIL SCAN -->
+          <div class="share-action-container">
+            <button class="btn-share-inline" onclick="openExcelOptionsModal()">
+              <i
+                class="fa-solid fa-file-excel"
+                style="color: var(--neon-green)"
+              ></i>
+              Export Excel
+            </button>
+            <button class="btn-share-inline" onclick="openPDFOptionsModal()">
+              <i
+                class="fa-solid fa-file-pdf"
+                style="color: var(--neon-red)"
+              ></i>
+              Export PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= HALAMAN 3: CARI PER TANGGAL ================= -->
+      <div class="page-view" id="page-history">
+        <div class="page-header-nav">
+          <button class="btn-back" onclick="switchPage('page-home')">
+            <i class="fa-solid fa-arrow-left"></i> Kembali ke Menu Utama
+          </button>
+          <span
+            id="currentDateBadge"
+            style="font-size: 12px; color: var(--neon-green); font-weight: 800"
+            >Hari Ini</span
+          >
+        </div>
+
+        <div class="filter-row">
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="🔍 Cari data..."
+            oninput="renderList()"
+          />
+          <input
+            type="date"
+            id="dateFilterInput"
+            class="date-picker-input"
+            onchange="filterBySelectedDate()"
+          />
+        </div>
+
+        <div class="stats-single-box">
+          <div class="stat-lbl-large">TOTAL DATA DITEMUKAN</div>
+          <div class="stat-val-large" id="statTotalScanHistory">0</div>
+        </div>
+
+        <div class="data-list-box" id="scanListHistory"></div>
+
+        <div class="share-action-container">
+          <button class="btn-share-inline" onclick="openExcelOptionsModal()">
+            <i
+              class="fa-solid fa-file-excel"
+              style="color: var(--neon-green)"
+            ></i>
+            Export Excel
+          </button>
+          <button class="btn-share-inline" onclick="openPDFOptionsModal()">
+            <i class="fa-solid fa-file-pdf" style="color: var(--neon-red)"></i>
+            Export PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= HALAMAN 4: EXPORT DATA ================= -->
+      <div class="page-view" id="page-export">
+        <div class="page-header-nav">
+          <button class="btn-back" onclick="switchPage('page-home')">
+            <i class="fa-solid fa-arrow-left"></i> Kembali ke Menu Utama
+          </button>
+        </div>
+
+        <h3
+          style="
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+          "
+        >
+          Pilih Format Laporan Data
+        </h3>
+
+        <div class="grid-menu-container">
+          <div class="neon-card green-border" onclick="openExcelOptionsModal()">
+            <i class="fa-solid fa-file-excel card-icon"></i>
+            <div class="card-title">Format Excel</div>
+            <div class="card-desc">Simpan atau Bagikan File (.xlsx)</div>
+          </div>
+
+          <div class="neon-card red-border" onclick="openPDFOptionsModal()">
+            <i class="fa-solid fa-file-pdf card-icon"></i>
+            <div class="card-title">Format PDF</div>
+            <div class="card-desc">Simpan atau Bagikan File (.pdf)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POP-UP NOTIFIKASI TOAST -->
+    <div id="toast">✅ Barcode Berhasil Terdeteksi!</div>
+
+    <!-- MODAL DIALOG EXCEL -->
+    <div class="modal" id="excelModal">
+      <div class="modal-content">
+        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center">
+          Opsi Laporan Excel
+        </h3>
+
+        <button
+          class="share-opt-btn"
+          onclick="
+            exportToExcel();
+            closeModals();
+          "
+        >
+          <i class="fa-solid fa-download" style="color: var(--neon-cyan)"></i>
+          Unduh / Simpan Ke File
+        </button>
+
+        <button
+          class="share-opt-btn"
+          onclick="
+            shareExcelFile();
+            closeModals();
+          "
+        >
+          <i class="fa-brands fa-whatsapp" style="color: var(--neon-green)"></i>
+          Kirim File via WhatsApp
+        </button>
+
+        <button
+          class="btn-custom btn-danger"
+          style="width: 100%; margin-top: 10px; justify-content: center"
+          onclick="closeModals()"
+        >
+          Batal
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL DIALOG PDF -->
+    <div class="modal" id="pdfModal">
+      <div class="modal-content">
+        <h3 style="font-size: 16px; margin-bottom: 16px; text-align: center">
+          Opsi Laporan PDF
+        </h3>
+
+        <button
+          class="share-opt-btn"
+          onclick="
+            exportToPDF();
+            closeModals();
+          "
+        >
+          <i class="fa-solid fa-download" style="color: var(--neon-cyan)"></i>
+          Unduh / Simpan Ke File
+        </button>
+
+        <button
+          class="share-opt-btn"
+          onclick="
+            sharePDFFile();
+            closeModals();
+          "
+        >
+          <i class="fa-brands fa-whatsapp" style="color: var(--neon-green)"></i>
+          Kirim File via WhatsApp
+        </button>
+
+        <button
+          class="btn-custom btn-danger"
+          style="width: 100%; margin-top: 10px; justify-content: center"
+          onclick="closeModals()"
+        >
+          Batal
+        </button>
+      </div>
+    </div>
+
+    <!-- TEMPLATE LAPORAN PDF TERSEMBUNYI -->
+    <div
+      id="pdfReportTemplate"
+      style="display: none; padding: 20px; background: #fff; color: #000"
+    >
+      <div
+        style="
+          text-align: center;
+          border-bottom: 2px solid #000;
+          padding-bottom: 10px;
+          margin-bottom: 15px;
+        "
+      >
+        <h2 style="margin: 0; font-size: 18px">PT DAYA SAKTI NIAGA</h2>
+        <p style="margin: 5px 0 0; font-size: 12px">
+          Laporan Hasil Pemindaian Barcode Otomatis
+        </p>
+        <p
+          id="pdfReportDate"
+          style="margin: 2px 0 0; font-size: 11px; color: #555"
+        ></p>
+      </div>
+
+      <div
+        id="pdfReportMeta"
+        style="
+          font-size: 11px;
+          margin-bottom: 12px;
+          font-weight: bold;
+          color: #333;
+        "
+      ></div>
+
+      <table
+        style="width: 100%; border-collapse: collapse; font-size: 11px"
+        border="1"
+        cellpadding="6"
+      >
+        <thead>
+          <tr style="background: #f2f2f2">
+            <th width="12%">No</th>
+            <th>Isi Barcode / Data Detail</th>
+          </tr>
+        </thead>
+        <tbody id="pdfReportBody"></tbody>
+      </table>
+    </div>
+
+    <!-- File JavaScript Eksternal -->
+    <script src="script.js"></script>
+  </body>
+</html>
